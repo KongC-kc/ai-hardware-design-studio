@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Node / Vite / Tauri
+node_modules/
+dist/
+target/
+apps/desktop/src-tauri/target/
+
+# Generated workspace outputs
+workspace/*
+!workspace/.gitkeep
+
+# Local files
+.env
+*.log
+.DS_Store
+Thumbs.db

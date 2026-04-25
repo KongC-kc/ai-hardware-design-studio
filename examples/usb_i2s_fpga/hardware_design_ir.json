@@ -1,0 +1,161 @@
+{
+  "meta": {
+    "name": "usb_i2s_fpga",
+    "version": "0.1.0",
+    "description": "USB audio to I2S FPGA board"
+  },
+  "requirements": {
+    "input": [
+      "USB-C"
+    ],
+    "output": [
+      "I2S"
+    ],
+    "power_input": "USB 5V",
+    "features": [
+      "FPGA",
+      "dual_oscillator",
+      "low_noise_power"
+    ]
+  },
+  "blocks": [
+    {
+      "id": "usb_c",
+      "type": "connector",
+      "part": "PLACEHOLDER_USB_C_RECEPTACLE",
+      "interfaces": [
+        "USB"
+      ],
+      "power_nets": [
+        "VBUS_5V"
+      ]
+    },
+    {
+      "id": "usb_interface",
+      "type": "usb_audio_bridge",
+      "part": "PLACEHOLDER_USB_AUDIO_IC",
+      "interfaces": [
+        "USB",
+        "I2S"
+      ],
+      "power_nets": [
+        "3V3"
+      ]
+    },
+    {
+      "id": "fpga",
+      "type": "fpga",
+      "part": "PLACEHOLDER_FPGA",
+      "interfaces": [
+        "I2S",
+        "SPI",
+        "GPIO"
+      ],
+      "power_nets": [
+        "3V3",
+        "1V2"
+      ]
+    },
+    {
+      "id": "clock_44m",
+      "type": "oscillator",
+      "part": "PLACEHOLDER_LOW_JITTER_OSCILLATOR",
+      "frequency": "45.1584MHz",
+      "power_nets": [
+        "3V3"
+      ]
+    },
+    {
+      "id": "clock_49m",
+      "type": "oscillator",
+      "part": "PLACEHOLDER_LOW_JITTER_OSCILLATOR",
+      "frequency": "49.152MHz",
+      "power_nets": [
+        "3V3"
+      ]
+    },
+    {
+      "id": "ldo_3v3",
+      "type": "regulator",
+      "part": "PLACEHOLDER_LOW_NOISE_3V3_LDO",
+      "input_net": "VBUS_5V",
+      "output_net": "3V3"
+    },
+    {
+      "id": "ldo_1v2",
+      "type": "regulator",
+      "part": "PLACEHOLDER_LOW_NOISE_1V2_LDO",
+      "input_net": "3V3",
+      "output_net": "1V2"
+    }
+  ],
+  "power_tree": [
+    {
+      "net": "VBUS_5V",
+      "source": "USB-C",
+      "children": [
+        "3V3_LDO"
+      ]
+    },
+    {
+      "net": "3V3",
+      "source": "3V3_LDO",
+      "children": [
+        "1V2_LDO",
+        "usb_interface",
+        "fpga",
+        "clock_44m",
+        "clock_49m"
+      ]
+    },
+    {
+      "net": "1V2",
+      "source": "1V2_LDO",
+      "children": [
+        "fpga_core"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "usb_c.USB_D_P",
+      "to": "usb_interface.USB_D_P",
+      "net": "USB_D_P"
+    },
+    {
+      "from": "usb_c.USB_D_N",
+      "to": "usb_interface.USB_D_N",
+      "net": "USB_D_N"
+    },
+    {
+      "from": "usb_interface.I2S_BCLK",
+      "to": "fpga.I2S_BCLK",
+      "net": "I2S_BCLK"
+    },
+    {
+      "from": "usb_interface.I2S_LRCK",
+      "to": "fpga.I2S_LRCK",
+      "net": "I2S_LRCK"
+    },
+    {
+      "from": "usb_interface.I2S_DATA",
+      "to": "fpga.I2S_DATA",
+      "net": "I2S_DATA"
+    },
+    {
+      "from": "clock_44m.OUT",
+      "to": "fpga.MCLK_44M",
+      "net": "MCLK_44M"
+    },
+    {
+      "from": "clock_49m.OUT",
+      "to": "fpga.MCLK_49M",
+      "net": "MCLK_49M"
+    }
+  ],
+  "design_rules": {
+    "decoupling_required": true,
+    "power_flags_required": true,
+    "erc_must_pass": true
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-hardware-design-studio.local/schema/hardware_design_ir.schema.json",
+  "title": "AI Hardware Design Studio Hardware Design IR",
+  "type": "object",
+  "required": [
+    "meta",
+    "requirements",
+    "blocks",
+    "power_tree",
+    "connections",
+    "design_rules"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "required": [
+        "input",
+        "output",
+        "power_input",
+        "features"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "output": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "power_input": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_\\-]+$"
+          },
+          "type": {
+            "type": "string"
+          },
+          "part": {
+            "type": "string"
+          },
+          "interfaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "power_nets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "frequency": {
+            "type": "string"
+          },
+          "input_net": {
+            "type": "string"
+          },
+          "output_net": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "power_tree": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "net",
+          "source",
+          "children"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "net": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "net"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_\\-]+\\.[a-zA-Z0-9_\\-]+$"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_\\-]+\\.[a-zA-Z0-9_\\-]+$"
+          },
+          "net": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "design_rules": {
+      "type": "object",
+      "required": [
+        "decoupling_required",
+        "power_flags_required",
+        "erc_must_pass"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "decoupling_required": {
+          "type": "boolean"
+        },
+        "power_flags_required": {
+          "type": "boolean"
+        },
+        "erc_must_pass": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

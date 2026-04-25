@@ -1,0 +1,13 @@
+[project]
+name = "ai-hardware-design-studio"
+version = "0.1.0"
+description = "AI schematic design agent and deterministic KiCad project compiler."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

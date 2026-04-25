@@ -1,0 +1,13 @@
+{
+  "name": "ai-hardware-design-studio",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/desktop"
+  ],
+  "scripts": {
+    "dev:desktop": "npm --workspace apps/desktop run dev",
+    "build:desktop": "npm --workspace apps/desktop run build",
+    "tauri:dev": "npm --workspace apps/desktop run tauri:dev"
+  }
+}
