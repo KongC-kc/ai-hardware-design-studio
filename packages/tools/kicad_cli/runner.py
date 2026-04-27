@@ -69,7 +69,7 @@ def run_erc(schematic_path: Path, report_path: Path) -> CommandResult:
     """
 
     return run_kicad_cli(
-        ["sch", "erc", "--output", str(report_path), str(schematic_path)],
+        ["sch", "erc", "--format", "json", "--output", str(report_path), str(schematic_path)],
         cwd=schematic_path.parent,
     )
 

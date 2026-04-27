@@ -52,6 +52,123 @@ export type ProjectSnapshot = {
   irJson: string;
 };
 
+export type DetectedSheet = {
+  name: string;
+  file: string;
+  source_schematic: string;
+  resolved_path: string;
+  exists: boolean;
+};
+
+export type ProjectInspectionSummary = {
+  project_name: string;
+  project_root: string;
+  project_files: string[];
+  schematic_files: string[];
+  pcb_files: string[];
+  symbol_library_tables: string[];
+  footprint_library_tables: string[];
+  detected_sheets: DetectedSheet[];
+  warnings: string[];
+};
+
+export type DesignRequestFeature = {
+  type: string;
+  count: number;
+  notes: string;
+};
+
+export type ParsedDesignRequest = {
+  raw_request: string;
+  target: string;
+  mcu: Record<string, string>;
+  power: {
+    input: string;
+    connector: string;
+    required_rails: string[];
+  };
+  interfaces: DesignRequestFeature[];
+  io: DesignRequestFeature[];
+  required_schematic_blocks: string[];
+  assumptions: string[];
+  open_questions: string[];
+  risk_notes: string[];
+};
+
+export type DesignPlan = {
+  plan_title: string;
+  schematic_blocks: string[];
+  recommended_flow: string[];
+  files_expected_to_change: string[];
+  user_confirmations_required: string[];
+  next_action: string;
+};
+
+export type DesignParseResult = {
+  parsed_request: ParsedDesignRequest;
+  design_plan: DesignPlan;
+};
+
+export type HardwareDesignIRPreviewSource = {
+  raw_request: string;
+  parser: string;
+  planner: string;
+  design_plan_title: string;
+  project_inspection:
+    | "not_provided"
+    | {
+        project_name?: string;
+        project_root?: string;
+      };
+};
+
+export type ProposedSheet = {
+  name: string;
+  purpose: string;
+  status: "preview";
+};
+
+export type ProposedModule = {
+  id: string;
+  role: string;
+  description: string;
+  status: "preview";
+};
+
+export type ProposedNet = {
+  name: string;
+  type: string;
+  description: string;
+  status: "preview";
+};
+
+export type HardwareDesignIRPreview = {
+  ir_version: string;
+  mode: "preview_only";
+  source: HardwareDesignIRPreviewSource;
+  target: string;
+  proposed_sheets: ProposedSheet[];
+  proposed_modules: ProposedModule[];
+  proposed_nets: ProposedNet[];
+  estimated_files_to_modify: string[];
+  risks: string[];
+  confirmation_items: string[];
+  next_action: "confirm_change_plan_before_ir_write";
+};
+
+export type ReportKind = "erc_diagnostics" | "erc_explanation" | "generation_report";
+
+export type JsonObject = Record<string, unknown>;
+
+export type ReportReadResult = {
+  success: boolean;
+  kind: ReportKind;
+  path: string | null;
+  data: JsonObject | null;
+  errors: string[];
+  warnings: string[];
+};
+
 export type CenterTab = "schematic" | "architecture" | "ir";
 
 export type BottomTab = "logs" | "erc" | "bom" | "netlist" | "exports";
