@@ -1,11 +1,21 @@
-import { Boxes, Braces, CircuitBoard } from "lucide-react";
-import type { CenterTab, HardwareBlock, LogicalConnection } from "../types/studio";
+import { useState } from "react";
+import {
+  Boxes,
+  Braces,
+  CircuitBoard,
+  FileText,
+  LayoutGrid,
+  ImageOff,
+} from "lucide-react";
+import type { CenterTab, JsonObject, ProjectPreview, ReportData, ReportSubTab } from "../types/studio";
 
 type CenterWorkspaceProps = {
   activeTab: CenterTab;
-  blocks: HardwareBlock[];
-  connections: LogicalConnection[];
+  blocks: { id: string; type: string; part: string; powerNets: string[] }[];
+  connections: { from: string; to: string; net: string }[];
   irJson: string;
+  reports: ReportData;
+  preview: ProjectPreview;
   onTabChange: (tab: CenterTab) => void;
 };
 
@@ -14,96 +24,74 @@ export function CenterWorkspace({
   blocks,
   connections,
   irJson,
+  reports,
+  preview,
   onTabChange,
 }: CenterWorkspaceProps) {
   return (
     <main className="center-workspace">
       <div className="tab-strip">
-        <TabButton
-          active={activeTab === "schematic"}
-          icon={<CircuitBoard size={16} />}
-          label="Schematic Viewer"
-          onClick={() => onTabChange("schematic")}
-        />
-        <TabButton
-          active={activeTab === "architecture"}
-          icon={<Boxes size={16} />}
-          label="Architecture View"
-          onClick={() => onTabChange("architecture")}
-        />
-        <TabButton
-          active={activeTab === "ir"}
-          icon={<Braces size={16} />}
-          label="IR JSON Viewer"
-          onClick={() => onTabChange("ir")}
-        />
+        <TabButton active={activeTab === "schematic"} icon={<CircuitBoard size={16} />} label="Schematic" onClick={() => onTabChange("schematic")} />
+        <TabButton active={activeTab === "pcb"} icon={<LayoutGrid size={16} />} label="PCB" onClick={() => onTabChange("pcb")} />
+        <TabButton active={activeTab === "architecture"} icon={<Boxes size={16} />} label="Architecture" onClick={() => onTabChange("architecture")} />
+        <TabButton active={activeTab === "ir"} icon={<Braces size={16} />} label="IR JSON" onClick={() => onTabChange("ir")} />
+        <TabButton active={activeTab === "reports"} icon={<FileText size={16} />} label="Reports" onClick={() => onTabChange("reports")} />
       </div>
-      {activeTab === "schematic" && <SchematicPreview blocks={blocks} connections={connections} />}
-      {activeTab === "architecture" && <ArchitectureView blocks={blocks} connections={connections} />}
-      {activeTab === "ir" && <pre className="ir-viewer">{irJson}</pre>}
+      <div className="center-content">
+        {activeTab === "schematic" && <SchematicPreview svgPath={preview.schematicSvgPath} />}
+        {activeTab === "pcb" && <PcbPreview svgPath={preview.pcbSvgPath} />}
+        {activeTab === "architecture" && (
+          <ArchitectureView blocks={blocks} connections={connections} />
+        )}
+        {activeTab === "ir" && <pre className="ir-viewer">{irJson}</pre>}
+        {activeTab === "reports" && <ReportsViewer reports={reports} />}
+      </div>
     </main>
   );
 }
 
-type TabButtonProps = {
-  active: boolean;
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-};
+/* ---- Schematic Preview ---- */
 
-function TabButton({ active, icon, label, onClick }: TabButtonProps) {
+function SchematicPreview({ svgPath }: { svgPath: string | null }) {
+  if (!svgPath) {
+    return (
+      <div className="preview-empty">
+        <ImageOff size={48} strokeWidth={1.2} />
+        <p>尚未生成原理图预览，请先运行 pipeline / export schematic。</p>
+      </div>
+    );
+  }
   return (
-    <button className={`tab-button ${active ? "tab-button-active" : ""}`} onClick={onClick}>
-      {icon}
-      <span>{label}</span>
-    </button>
+    <div className="preview-frame">
+      <img src={svgPath} alt="Schematic preview" className="preview-image" />
+    </div>
   );
 }
 
-type SchematicPreviewProps = {
-  blocks: HardwareBlock[];
-  connections: LogicalConnection[];
-};
+/* ---- PCB Preview ---- */
 
-function SchematicPreview({ blocks, connections }: SchematicPreviewProps) {
+function PcbPreview({ svgPath }: { svgPath: string | null }) {
+  if (!svgPath) {
+    return (
+      <div className="preview-empty">
+        <ImageOff size={48} strokeWidth={1.2} />
+        <p>PCB 预览尚未实现。</p>
+      </div>
+    );
+  }
   return (
-    <section className="schematic-view">
-      <svg className="schematic-canvas" viewBox="0 0 1000 620" role="img" aria-label="Mock schematic">
-        <rect x="0" y="0" width="1000" height="620" fill="#fbfdff" />
-        <line x1="110" y1="310" x2="860" y2="310" stroke="#cbd5e1" strokeWidth="2" />
-        {blocks.map((block, index) => {
-          const x = 80 + (index % 3) * 310;
-          const y = 90 + Math.floor(index / 3) * 250;
-          return (
-            <g key={block.id}>
-              <rect x={x} y={y} width="220" height="112" rx="6" fill="#e0f2fe" stroke="#0284c7" />
-              <text x={x + 18} y={y + 38} fontSize="18" fill="#0f172a" fontFamily="Inter, Arial">
-                {block.id}
-              </text>
-              <text x={x + 18} y={y + 68} fontSize="13" fill="#475569" fontFamily="Inter, Arial">
-                {block.type}
-              </text>
-              <text x={x + 18} y={y + 92} fontSize="12" fill="#0369a1" fontFamily="Inter, Arial">
-                {block.powerNets.join(" / ") || "signal"}
-              </text>
-            </g>
-          );
-        })}
-        <text x="80" y="560" fontSize="15" fill="#475569" fontFamily="Inter, Arial">
-          {connections.length} logical nets in mock preview
-        </text>
-      </svg>
-    </section>
+    <div className="preview-frame">
+      <img src={svgPath} alt="PCB preview" className="preview-image" />
+    </div>
   );
 }
 
-type ArchitectureViewProps = {
-  blocks: HardwareBlock[];
-  connections: LogicalConnection[];
-};
+/* ---- Architecture View (kept as auxiliary tab) ---- */
 
-function ArchitectureView({ blocks, connections }: ArchitectureViewProps) {
+type BlockLike = { id: string; type: string; part: string; powerNets: string[] };
+type ConnLike = { from: string; to: string; net: string };
+
+function ArchitectureView({ blocks, connections }: { blocks: BlockLike[]; connections: ConnLike[] }) {
   return (
     <section className="architecture-view">
       <div className="architecture-column">
@@ -132,5 +120,69 @@ function ArchitectureView({ blocks, connections }: ArchitectureViewProps) {
         </div>
       </div>
     </section>
+  );
+}
+
+/* ---- Reports Viewer (sub-tabbed) ---- */
+
+function ReportsViewer({ reports }: { reports: ReportData }) {
+  const [subTab, setSubTab] = useState<ReportSubTab>("pipeline_report");
+
+  return (
+    <div className="reports-viewer">
+      <div className="report-sub-tabs">
+        <SubTabButton active={subTab === "pipeline_report"} label="Pipeline" onClick={() => setSubTab("pipeline_report")} />
+        <SubTabButton active={subTab === "generation_report"} label="Generation" onClick={() => setSubTab("generation_report")} />
+        <SubTabButton active={subTab === "erc_diagnostics"} label="ERC Diagnostics" onClick={() => setSubTab("erc_diagnostics")} />
+        <SubTabButton active={subTab === "erc_explanation"} label="Explanation" onClick={() => setSubTab("erc_explanation")} />
+        <SubTabButton active={subTab === "erc_suggested_fixes"} label="Suggested Fixes" onClick={() => setSubTab("erc_suggested_fixes")} />
+      </div>
+      <div className="report-content">
+        {subTab === "pipeline_report" && <JsonViewer data={reports.pipelineReport as unknown as JsonObject} />}
+        {subTab === "generation_report" && <JsonViewer data={reports.generationReport} />}
+        {subTab === "erc_diagnostics" && <JsonViewer data={reports.ercDiagnostics} />}
+        {subTab === "erc_explanation" && <JsonViewer data={reports.ercExplanation} />}
+        {subTab === "erc_suggested_fixes" && <JsonViewer data={reports.ercSuggestedFixes} />}
+      </div>
+    </div>
+  );
+}
+
+function JsonViewer({ data }: { data: JsonObject | null }) {
+  if (!data) {
+    return <div className="preview-empty"><p>No data available.</p></div>;
+  }
+  return <pre className="ir-viewer">{JSON.stringify(data, null, 2)}</pre>;
+}
+
+/* ---- Shared button components ---- */
+
+type TabButtonProps = {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+};
+
+function TabButton({ active, icon, label, onClick }: TabButtonProps) {
+  return (
+    <button className={`tab-button ${active ? "tab-button-active" : ""}`} onClick={onClick}>
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+type SubTabButtonProps = {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+};
+
+function SubTabButton({ active, label, onClick }: SubTabButtonProps) {
+  return (
+    <button className={`sub-tab ${active ? "sub-tab-active" : ""}`} onClick={onClick}>
+      {label}
+    </button>
   );
 }

@@ -4,12 +4,14 @@ import { CenterWorkspace } from "../components/CenterWorkspace";
 import { RightPanel } from "../components/RightPanel";
 import { Sidebar } from "../components/Sidebar";
 import { useMockStudioStore } from "../stores/mockStudioStore";
-import type { BottomTab, CenterTab } from "../types/studio";
+import type { BottomTab, CenterTab, JsonObject } from "../types/studio";
 
 export function StudioPage() {
   const project = useMockStudioStore();
   const [centerTab, setCenterTab] = useState<CenterTab>("schematic");
-  const [bottomTab, setBottomTab] = useState<BottomTab>("logs");
+  const [bottomTab, setBottomTab] = useState<BottomTab>("pipeline");
+
+  const fixes = (project.reports.ercSuggestedFixes?.fixes ?? []) as unknown as JsonObject[];
 
   return (
     <div className="studio-shell">
@@ -19,9 +21,9 @@ export function StudioPage() {
           <span>{project.description}</span>
         </div>
         <div className="topbar-status">
-          <span>V1 Mock Pipeline</span>
-          <span>IR First</span>
-          <span>KiCad Generator</span>
+          <span>V1 MVP</span>
+          <span>Pipeline OK</span>
+          <span>Mock Data</span>
         </div>
       </header>
       <div className="workspace-grid">
@@ -31,11 +33,18 @@ export function StudioPage() {
           blocks={project.blocks}
           connections={project.connections}
           irJson={project.irJson}
+          reports={project.reports}
+          preview={project.preview}
           onTabChange={setCenterTab}
         />
-        <RightPanel actions={project.actions} messages={project.chat} />
+        <RightPanel actions={project.actions} messages={project.chat} suggestedFixes={fixes} />
       </div>
-      <BottomPanel activeTab={bottomTab} logs={project.logs} onTabChange={setBottomTab} />
+      <BottomPanel
+        activeTab={bottomTab}
+        logs={project.logs}
+        pipelineReport={project.reports.pipelineReport}
+        onTabChange={setBottomTab}
+      />
     </div>
   );
 }

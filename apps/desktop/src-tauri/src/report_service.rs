@@ -120,6 +120,7 @@ fn filename_for_kind(kind: &str) -> Result<&'static str, String> {
     match kind {
         "erc_diagnostics" => Ok("erc_diagnostics.json"),
         "erc_explanation" => Ok("erc_explanation.json"),
+        "erc_suggested_fixes" => Ok("erc_suggested_fixes.json"),
         "generation_report" => Ok("generation_report.json"),
         _ => Err(format!("Unsupported report kind: {kind}")),
     }
@@ -267,6 +268,32 @@ mod tests {
         assert_eq!(
             result.data.expect("data should be present")["mode"],
             json!("explain_erc_report")
+        );
+    }
+
+    #[test]
+    fn reads_whitelisted_erc_suggested_fixes_report() {
+        let project_path = create_temp_project();
+        write_json(
+            &project_path.join("reports").join("erc_suggested_fixes.json"),
+            json!({"success": true, "mode": "suggest_erc_fixes", "fixes": []}),
+        );
+
+        let result = read_report_file(
+            project_path.to_string_lossy().to_string(),
+            "erc_suggested_fixes".to_string(),
+        );
+
+        assert!(result.success, "{:?}", result.errors);
+        assert_eq!(result.kind, "erc_suggested_fixes");
+        let path = result.path.expect("path should be present");
+        assert!(
+            path.ends_with("reports\\erc_suggested_fixes.json")
+                || path.ends_with("reports/erc_suggested_fixes.json")
+        );
+        assert_eq!(
+            result.data.expect("data should be present")["mode"],
+            json!("suggest_erc_fixes")
         );
     }
 

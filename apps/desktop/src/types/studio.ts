@@ -40,6 +40,28 @@ export type LogEntry = {
   message: string;
 };
 
+export type PipelineStepSnapshot = {
+  step: string;
+  success: boolean;
+  details: Record<string, unknown>;
+};
+
+export type PipelineReport = {
+  success: boolean;
+  ir_path: string;
+  project_path: string;
+  completed_steps: string[];
+  failed_step: string | null;
+  steps: PipelineStepSnapshot[];
+  errors: string[];
+  warnings: string[];
+};
+
+export type ProjectPreview = {
+  schematicSvgPath: string | null;
+  pcbSvgPath: string | null;
+};
+
 export type ProjectSnapshot = {
   name: string;
   description: string;
@@ -50,6 +72,16 @@ export type ProjectSnapshot = {
   chat: ChatMessage[];
   logs: LogEntry[];
   irJson: string;
+  reports: ReportData;
+  preview: ProjectPreview;
+};
+
+export type ReportData = {
+  generationReport: JsonObject | null;
+  ercDiagnostics: JsonObject | null;
+  ercExplanation: JsonObject | null;
+  ercSuggestedFixes: JsonObject | null;
+  pipelineReport: PipelineReport | null;
 };
 
 export type DetectedSheet = {
@@ -156,7 +188,12 @@ export type HardwareDesignIRPreview = {
   next_action: "confirm_change_plan_before_ir_write";
 };
 
-export type ReportKind = "erc_diagnostics" | "erc_explanation" | "generation_report";
+export type ReportKind =
+  | "erc_diagnostics"
+  | "erc_explanation"
+  | "erc_suggested_fixes"
+  | "generation_report"
+  | "pipeline_report";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -169,6 +206,18 @@ export type ReportReadResult = {
   warnings: string[];
 };
 
-export type CenterTab = "schematic" | "architecture" | "ir";
+export type CenterTab =
+  | "schematic"
+  | "pcb"
+  | "architecture"
+  | "ir"
+  | "reports";
 
-export type BottomTab = "logs" | "erc" | "bom" | "netlist" | "exports";
+export type ReportSubTab =
+  | "generation_report"
+  | "erc_diagnostics"
+  | "erc_explanation"
+  | "erc_suggested_fixes"
+  | "pipeline_report";
+
+export type BottomTab = "logs" | "pipeline" | "erc" | "bom" | "netlist";

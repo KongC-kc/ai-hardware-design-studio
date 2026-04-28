@@ -13,7 +13,9 @@ export type ReportReader = {
 export type MockReportReaderData = {
   ercDiagnostics?: JsonObject | null;
   ercExplanation?: JsonObject | null;
+  ercSuggestedFixes?: JsonObject | null;
   generationReport?: JsonObject | null;
+  pipelineReport?: JsonObject | null;
 };
 
 export const READ_REPORT_COMMAND = "read_report";
@@ -21,13 +23,17 @@ export const READ_REPORT_COMMAND = "read_report";
 const REPORT_FILES: Record<ReportKind, string> = {
   erc_diagnostics: "erc_diagnostics.json",
   erc_explanation: "erc_explanation.json",
+  erc_suggested_fixes: "erc_suggested_fixes.json",
   generation_report: "generation_report.json",
+  pipeline_report: "pipeline_report.json",
 };
 
 const MOCK_KEYS: Record<ReportKind, keyof MockReportReaderData> = {
   erc_diagnostics: "ercDiagnostics",
   erc_explanation: "ercExplanation",
+  erc_suggested_fixes: "ercSuggestedFixes",
   generation_report: "generationReport",
+  pipeline_report: "pipelineReport",
 };
 
 export function createMockReportReader(data: MockReportReaderData = {}): ReportFileReader {
@@ -39,8 +45,14 @@ export function createMockReportReader(data: MockReportReaderData = {}): ReportF
       if (path.endsWith(REPORT_FILES.erc_explanation)) {
         return data.ercExplanation ?? null;
       }
+      if (path.endsWith(REPORT_FILES.erc_suggested_fixes)) {
+        return data.ercSuggestedFixes ?? null;
+      }
       if (path.endsWith(REPORT_FILES.generation_report)) {
         return data.generationReport ?? null;
+      }
+      if (path.endsWith(REPORT_FILES.pipeline_report)) {
+        return data.pipelineReport ?? null;
       }
       return null;
     },
@@ -87,6 +99,20 @@ export async function readErcExplanationReport(
   reader: ReportFileReader | ReportReader = createTauriReportReader(createMockReportReader()),
 ): Promise<ReportReadResult> {
   return readReport(projectPath, "erc_explanation", reader);
+}
+
+export async function readErcSuggestedFixesReport(
+  projectPath: string,
+  reader: ReportFileReader | ReportReader = createTauriReportReader(createMockReportReader()),
+): Promise<ReportReadResult> {
+  return readReport(projectPath, "erc_suggested_fixes", reader);
+}
+
+export async function readPipelineReport(
+  projectPath: string,
+  reader: ReportFileReader | ReportReader = createTauriReportReader(createMockReportReader()),
+): Promise<ReportReadResult> {
+  return readReport(projectPath, "pipeline_report", reader);
 }
 
 export async function readReport(
@@ -143,16 +169,14 @@ export function createEmptyReportResult(
 
 export function createReportReaderWithMockData(data: MockReportReaderData): ReportFileReader {
   return createMockReportReader({
-    [MOCK_KEYS.erc_diagnostics]: data.ercDiagnostics ?? null,
-    [MOCK_KEYS.erc_explanation]: data.ercExplanation ?? null,
-    [MOCK_KEYS.generation_report]: data.generationReport ?? null,
+    ercDiagnostics: data.ercDiagnostics ?? null,
+    ercExplanation: data.ercExplanation ?? null,
+    ercSuggestedFixes: data.ercSuggestedFixes ?? null,
+    generationReport: data.generationReport ?? null,
+    pipelineReport: data.pipelineReport ?? null,
   });
 }
 
 function isReportReader(reader: ReportFileReader | ReportReader): reader is ReportReader {
   return "readReport" in reader;
 }
-
-// TODO: When the app adds richer project state, pass a selected project path into
-// this service instead of deriving report paths in UI components. GUI callers
-// should keep consuming ReportReadResult so this boundary stays stable.
