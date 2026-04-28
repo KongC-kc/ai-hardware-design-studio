@@ -13,9 +13,12 @@
     "plan-changes": "node scripts/plan_changes_cli.mjs",
     "confirm-change-plan": "node scripts/confirm_change_plan_cli.mjs",
     "generate-kicad-artifacts": "node scripts/generate_kicad_artifacts_cli.mjs",
+    "export-schematic-svg": "node scripts/export_schematic_svg.mjs",
     "run-erc": "node scripts/run_erc_cli.mjs",
     "parse-erc-diagnostics": "node scripts/parse_erc_diagnostics_cli.mjs",
     "explain-erc-report": "node scripts/explain_erc_report_cli.mjs",
+    "suggest-erc-fixes": "node scripts/suggest_erc_fixes_cli.mjs",
+    "run-pipeline": "node scripts/run_pipeline.mjs",
     "tauri:dev": "npm --workspace apps/desktop run tauri:dev"
   }
 }

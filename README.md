@@ -152,6 +152,51 @@ This command runs `validate_ir` before generation and writes only:
 
 It does not generate `.kicad_pcb` and does not run layout. Existing target files are not overwritten unless `--overwrite` is provided. Failures return structured JSON with `success: false`, `written_files: []`, and `errors`.
 
+## Export Schematic SVG
+
+After KiCad artifacts are generated, export a schematic SVG through the controlled tool wrapper:
+
+```powershell
+python scripts/export_schematic_svg.py "E:\ninx_git\projectNinx"
+```
+
+NPM entry:
+
+```powershell
+npm run export-schematic-svg -- "E:\ninx_git\projectNinx"
+```
+
+The input can be either a project directory or a `.kicad_sch` file. The command detects `kicad-cli`, runs `sch export svg`, and writes:
+
+- `exports/schematic.svg`
+
+If `kicad-cli` is missing or no `.kicad_sch` can be found, the command returns structured JSON with `success: false` and does not crash. This step never modifies `.kicad_sch`, `.kicad_pcb`, or `.kicad_pro`, and it never generates `.kicad_pcb`.
+
+## Pipeline Orchestrator
+
+Run the full pipeline in one step:
+
+```powershell
+python scripts/run_pipeline.py "E:\ninx_git\projectNinx" --overwrite
+```
+
+NPM entry:
+
+```powershell
+npm run run-pipeline -- "E:\ninx_git\projectNinx" --overwrite
+```
+
+The pipeline chains six steps in order:
+
+1. `generate_kicad_artifacts` — generates `.kicad_pro`, `.kicad_sch`, `reports/generation_report.json`
+2. `export_schematic_svg` — exports `exports/schematic.svg`
+3. `run_erc` — runs ERC through `kicad-cli`
+4. `parse_erc_diagnostics` — normalizes ERC report
+5. `explain_erc_report` — generates rule-based explanations
+6. `suggest_erc_fixes` — generates proposal-only fix suggestions
+
+Each step calls existing modules without re-implementing logic. The pipeline stops on the first failure and always writes `reports/pipeline_report.json` with the status of every step attempted. The `--ir` flag accepts an explicit IR path; it defaults to `<project_path>/hardware_design_ir.json`.
+
 ## Run KiCad Schematic ERC
 
 After a deterministic schematic artifact exists, run schematic ERC through the controlled tool wrapper:
@@ -205,13 +250,33 @@ npm run explain-erc-report -- "E:\ninx_git\projectNinx"
 
 This command reads only `reports/erc_diagnostics.json` and writes `reports/erc_explanation.json`. It does not read the raw KiCad `erc_report.json`, does not run `kicad-cli`, and does not call a real LLM. The first rule set covers `PIN_NOT_CONNECTED`, `POWER_INPUT_NOT_DRIVEN`, `CONFLICTING_OUTPUTS`, and unknown diagnostics through a fallback explanation.
 
+## Suggest ERC Fixes
+
+Create proposal-only fix suggestions from normalized diagnostics and optional explanation reports:
+
+```powershell
+python scripts/suggest_erc_fixes.py "E:\ninx_git\projectNinx"
+```
+
+NPM entry:
+
+```powershell
+npm run suggest-erc-fixes -- "E:\ninx_git\projectNinx"
+```
+
+This command reads `reports/erc_diagnostics.json` and, when present, `reports/erc_explanation.json`. It writes only `reports/erc_suggested_fixes.json`. It does not run `kicad-cli`, does not modify `.kicad_sch`, `.kicad_pcb`, `.kicad_pro`, and does not edit `hardware_design_ir.json`.
+
+Every fix is a proposal with `auto_applicable: false` and `requires_user_confirmation: true`. The first rule set covers `PIN_NOT_CONNECTED`, `POWER_INPUT_NOT_DRIVEN`, `CONFLICTING_OUTPUTS`, and `GENERIC_UNKNOWN` fallback proposals. Missing diagnostics return structured failure. Missing explanations produce a warning and fall back to diagnostics-only suggestions.
+
 ## Read Reports Through Service Boundary
 
 The desktop app exposes a report-reading boundary in `apps/desktop/src/services/reportService.ts`. It returns a unified `ReportReadResult` for:
 
 - `reports/erc_diagnostics.json`
 - `reports/erc_explanation.json`
+- `reports/erc_suggested_fixes.json`
 - `reports/generation_report.json`
+- `reports/pipeline_report.json`
 
 The desktop backend also exposes a read-only Tauri command:
 
@@ -222,7 +287,7 @@ invoke("read_report", {
 })
 ```
 
-`kind` is whitelisted to `erc_diagnostics`, `erc_explanation`, and `generation_report`, which map only to files under `<project_path>/reports/`. The command rejects path-like kinds and `..` traversal, returns a structured empty state when a report is missing, and never reads arbitrary project files. The frontend service keeps a mock reader for tests and non-Tauri fallback.
+`kind` is whitelisted to `erc_diagnostics`, `erc_explanation`, `erc_suggested_fixes`, `generation_report`, and `pipeline_report`, which map only to files under `<project_path>/reports/`. The command rejects path-like kinds and `..` traversal, returns a structured empty state when a report is missing, and never reads arbitrary project files. The frontend service keeps a mock reader for tests and non-Tauri fallback.
 
 ## V1 Boundary
 

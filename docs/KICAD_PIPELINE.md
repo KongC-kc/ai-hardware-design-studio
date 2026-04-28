@@ -10,9 +10,37 @@ V1 treats KiCad as the compiler and verification backend. The design source of t
 4. Generate `<project_name>.kicad_pro`.
 5. Generate `<project_name>.kicad_sch`.
 6. Create `reports/`, `exports/`, and `bom/`.
-7. Run schematic ERC through `packages/tools/kicad_cli/erc_runner.py` when `kicad-cli` is available.
-8. Export PDF, SVG, BOM, and netlist when the toolchain supports it.
-9. Return machine-readable reports for AI explanation.
+7. Export `exports/schematic.svg` through `packages/tools/kicad_cli/svg_exporter.py` when `kicad-cli` is available.
+8. Run schematic ERC through `packages/tools/kicad_cli/erc_runner.py` when `kicad-cli` is available.
+9. Parse ERC diagnostics, explain, and suggest fixes.
+10. Return machine-readable reports for AI explanation.
+
+### Pipeline Orchestrator
+
+`packages/pipeline/orchestrator.py` chains all steps into a single entry point:
+
+```
+generate_kicad_artifacts
+→ export_schematic_svg
+→ run_erc
+→ parse_erc_diagnostics
+→ explain_erc_report
+→ suggest_erc_fixes
+```
+
+Run it:
+
+```powershell
+python scripts/run_pipeline.py "E:\ninx_git\projectNinx" --overwrite
+```
+
+or:
+
+```powershell
+npm run run-pipeline -- "E:\ninx_git\projectNinx" --overwrite
+```
+
+The orchestrator stops on first failure and always writes `reports/pipeline_report.json` with `completed_steps`, `failed_step`, per-step `details`, and aggregated `errors`/`warnings`.
 
 ## Read-Only Project Inspection
 
@@ -126,6 +154,35 @@ This stage writes only:
 
 It does not create `.kicad_pcb`, does not run layout, and does not call `kicad-cli`. Existing output files are protected by default; pass `--overwrite` to replace them. The JSON result includes `planned_files` before generation and `written_files` after generation.
 
+## Controlled Schematic SVG Export
+
+`packages/tools/kicad_cli/svg_exporter.py` is the controlled entry point for exporting a schematic SVG. It accepts either a project directory or a `.kicad_sch` file, resolves the schematic path, detects `kicad-cli`, and runs `sch export svg`.
+
+Run it from the repository root:
+
+```powershell
+python scripts/export_schematic_svg.py "E:\ninx_git\projectNinx"
+```
+
+or:
+
+```powershell
+npm run export-schematic-svg -- "E:\ninx_git\projectNinx"
+```
+
+The JSON result includes:
+
+- `success`
+- `mode: "export_schematic_svg"`
+- `project_path`
+- `schematic_path`
+- `svg_path`
+- `kicad_cli_found`
+- `errors`
+- `warnings`
+
+The command writes `exports/schematic.svg`. If `kicad-cli` is missing or no `.kicad_sch` can be found, it returns `success: false` with structured errors instead of raising an uncaught exception. It does not modify `.kicad_sch`, `.kicad_pcb`, or `.kicad_pro`, and it never generates `.kicad_pcb`.
+
 ## Controlled Schematic ERC
 
 `packages/tools/kicad_cli/erc_runner.py` is the controlled entry point for running KiCad ERC. It accepts either a project directory or a `.kicad_sch` file, resolves the schematic path, detects `kicad-cli`, and runs only schematic ERC. PCB DRC is intentionally out of scope for this stage.
@@ -214,6 +271,44 @@ The output contains:
 
 The MVP rule set covers `PIN_NOT_CONNECTED`, `POWER_INPUT_NOT_DRIVEN`, `CONFLICTING_OUTPUTS`, and `GENERIC_UNKNOWN`. Unknown diagnostic codes use the fallback rule and still produce plain-language context, likely causes, suggested fixes, and a `requires_user_confirmation` flag.
 
+## Rule-Based ERC Fix Suggestions
+
+`packages/agent/report_explainer/erc_fix_suggester.py` is the first `suggest_erc_fixes` boundary. It reads `reports/erc_diagnostics.json` and optionally reads `reports/erc_explanation.json`, then writes `reports/erc_suggested_fixes.json`.
+
+Run it from the repository root:
+
+```powershell
+python scripts/suggest_erc_fixes.py "E:\ninx_git\projectNinx"
+```
+
+or:
+
+```powershell
+npm run suggest-erc-fixes -- "E:\ninx_git\projectNinx"
+```
+
+This stage is proposal-only. It does not run `kicad-cli`, does not modify `.kicad_sch`, `.kicad_pcb`, `.kicad_pro`, and does not write `hardware_design_ir.json`. Every generated fix has `auto_applicable: false` and `requires_user_confirmation: true`.
+
+The output contains:
+
+- `success`
+- `mode: "suggest_erc_fixes"`
+- `sources`
+- `output`
+- `summary`
+- `fixes`
+- `errors`
+- `warnings`
+
+The MVP rule set covers:
+
+- `PIN_NOT_CONNECTED` -> an `add_connection` IR-change proposal with a `TODO_CONFIRM_TARGET`
+- `POWER_INPUT_NOT_DRIVEN` -> an `add_power_source_or_power_flag` IR-change proposal
+- `CONFLICTING_OUTPUTS` -> a conflict-resolution IR-change proposal
+- `GENERIC_UNKNOWN` and unknown codes -> a manual review proposal
+
+Missing `erc_diagnostics.json` returns structured failure and writes no suggestion file. Missing `erc_explanation.json` returns success with a warning and falls back to diagnostics-only suggestions.
+
 ## Report Service Boundary
 
 `apps/desktop/src/services/reportService.ts` is the GUI/Agent boundary for reading generated reports. Consumers should use `ReportReadResult` instead of directly binding UI state to individual report file shapes.
@@ -222,7 +317,9 @@ Supported report kinds:
 
 - `erc_diagnostics`: reads `reports/erc_diagnostics.json`
 - `erc_explanation`: reads `reports/erc_explanation.json`
+- `erc_suggested_fixes`: reads `reports/erc_suggested_fixes.json`
 - `generation_report`: reads `reports/generation_report.json`
+- `pipeline_report`: reads `reports/pipeline_report.json`
 
 The service currently provides a mock `ReportFileReader` and returns structured empty states when a report is missing:
 
@@ -250,7 +347,9 @@ invoke("read_report", {
 
 - `erc_diagnostics` -> `<project_path>/reports/erc_diagnostics.json`
 - `erc_explanation` -> `<project_path>/reports/erc_explanation.json`
+- `erc_suggested_fixes` -> `<project_path>/reports/erc_suggested_fixes.json`
 - `generation_report` -> `<project_path>/reports/generation_report.json`
+- `pipeline_report` -> `<project_path>/reports/pipeline_report.json`
 
 The backend rejects path-like `kind` values, rejects `..` traversal, canonicalizes existing report paths, and verifies the resolved file stays inside the project `reports` directory before reading. Missing reports return `success: false` with `data: null` and structured errors. This layer does not invoke `kicad-cli`, does not read KiCad project files directly, and does not call a real LLM.
 
